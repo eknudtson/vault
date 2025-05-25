@@ -26,7 +26,7 @@ entities=(
 for entity in ${entities[@]}; do
     echo "Syncing entity ${entity}"
     # Sync Vault canonical entities, set everyone to use admin policy for now
-    vault write -format=json identity/entity name="${entity}" policies="admin"
+    vault write -format=json identity/entity name="${entity}" policies="${entity}"
 
     ENTITY_ID=$(vault read -field=id identity/entity/name/${entity})
 
