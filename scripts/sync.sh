@@ -12,10 +12,15 @@ if [ "$(git branch --show-current)" != "main" ]; then
   exit 1
 fi
 
-# Update policies
-for policy in policies/*.hcl; do
+# Update user/entity policies
+for policy in policies/users/*.hcl; do
   vault policy write $(basename -s .hcl $policy) ${policy}
 done
+
+# Enable the OIDC auth backend (will error out if already configured)
+set +e
+vault auth enable -listing-visibility="unauth" oidc > /dev/null 2>&1
+set -e
 
 OIDC_AUTH_ACCESSOR=$(vault read -field accessor sys/auth/oidc)
 
@@ -24,7 +29,7 @@ entities=(
 )
 
 for entity in ${entities[@]}; do
-    echo "Syncing entity ${entity}"
+    echo "Syncing user entity into Vault: ${entity}"
     # Sync Vault canonical entities, set everyone to use admin policy for now
     vault write -format=json identity/entity name="${entity}" policies="${entity}"
 
@@ -37,4 +42,18 @@ for entity in ${entities[@]}; do
          mount_accessor="$OIDC_AUTH_ACCESSOR" \
          canonical_id="$ENTITY_ID" \
          >/dev/null 2>&1
+done
+
+# Setup Kubernetes cluster auth
+for cluster in policies/kubernetes/*; do
+    cluster=$(basename $cluster)
+    # Iterate over every namespace in cluster
+    for namespace in policies/kubernetes/"${cluster}"/*; do
+        namespace=$(basename $namespace)
+        # Iterate over service accounts in namespace
+        for serviceaccountpolicy in policies/kubernetes/"${cluster}"/"${namespace}"/*; do
+            serviceaccount=$(basename -s .hcl $serviceaccountpolicy)
+            vault policy write kubernetes-${cluster}-${namespace}-${serviceaccount} ${serviceaccountpolicy}
+        done
+    done
 done
