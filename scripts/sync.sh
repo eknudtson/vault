@@ -77,6 +77,11 @@ for cluster in policies/kubernetes/*; do
             kubernetes_ca_cert="@kubernetes/${cluster}/ca.crt" \
             disable_local_ca_jwt=true
 
+        vault write auth/kubernetes-rpi/config \
+            kubernetes_host="https://kubernetes.default.svc.cluster.local" \
+            kubernetes_ca_cert="@kubernetes/rpi/ca.crt" \
+            disable_local_ca_jwt=true
+
         echo "Kubernetes auth enabled for the ${cluster} cluster"
     fi
 done
