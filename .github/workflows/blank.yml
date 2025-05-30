@@ -37,4 +37,4 @@ jobs:
 
       - name: Sleep a bit
         run: |
-          sleep 60
+          sleep 600
